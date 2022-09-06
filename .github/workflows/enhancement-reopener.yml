@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
    inputs:
      readonly:
-       description: "readonly: Specify true or 1 to prevent changes from being commited to GitHub"
+       description: "readonly: Specify true or 1 to prevent changes from being committed to GitHub"
        default: false
 
 jobs:
