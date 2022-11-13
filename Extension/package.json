@@ -5682,7 +5682,7 @@
     "editorconfig": "^0.15.3",
     "escape-string-regexp": "^2.0.0",
     "glob": "^7.1.6",
-    "minimatch": "^3.0.4",
+    "minimatch": "^3.0.5",
     "mkdirp": "^0.5.5",
     "node-loader": "^2.0.0",
     "plist": "^3.0.5",
