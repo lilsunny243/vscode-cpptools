@@ -3,16 +3,16 @@
  * See 'LICENSE' in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { PsProcessParser } from './nativeAttach';
-import { AttachItem, showQuickPick } from './attachQuickPick';
 import { CppSettings } from '../LanguageServer/settings';
+import { AttachItem, showQuickPick } from './attachQuickPick';
+import { PsProcessParser } from './nativeAttach';
 
-import * as debugUtils from './utils';
 import * as os from 'os';
 import * as path from 'path';
-import * as util from '../common';
 import * as vscode from 'vscode';
 import * as nls from 'vscode-nls';
+import * as util from '../common';
+import * as debugUtils from './utils';
 
 nls.config({ messageFormat: nls.MessageFormat.bundle, bundleFormat: nls.BundleFormat.standalone })();
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
@@ -112,6 +112,7 @@ export class RemoteAttachPicker {
         let parameterBegin: string = `$(`;
         let parameterEnd: string = `)`;
         let escapedQuote: string = `\\\"`;
+        let shPrefix: string = ``;
 
         const settings: CppSettings = new CppSettings();
         if (settings.useBacktickCommandSubstitution) {
@@ -126,8 +127,13 @@ export class RemoteAttachPicker {
             innerQuote = `"`;
             outerQuote = `'`;
         }
+        // Also use a full path on Linux, so that we can use transports that need a full path such as 'machinectl' to connect to nspawn containers.
+        if (os.platform() === "linux") {
+            shPrefix = `/bin/`;
+        }
 
-        return `${outerQuote}sh -c ${innerQuote}uname && if [ ${parameterBegin}uname${parameterEnd} = ${escapedQuote}Linux${escapedQuote} ] ; ` +
+        return `${outerQuote}${shPrefix}sh -c ${innerQuote}uname && if [ ${parameterBegin}uname -o${parameterEnd} = ${escapedQuote}Toybox${escapedQuote} ] ; ` +
+            `then ${PsProcessParser.psToyboxCommand} ; elif [ ${parameterBegin}uname${parameterEnd} = ${escapedQuote}Linux${escapedQuote} ] ; ` +
             `then ${PsProcessParser.psLinuxCommand} ; elif [ ${parameterBegin}uname${parameterEnd} = ${escapedQuote}Darwin${escapedQuote} ] ; ` +
             `then ${PsProcessParser.psDarwinCommand}; fi${innerQuote}${outerQuote}`;
     }

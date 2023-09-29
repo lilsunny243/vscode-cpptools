@@ -7,6 +7,9 @@
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { getExperimentationServiceAsync, IExperimentationService, IExperimentationTelemetry, TargetPopulation } from 'vscode-tas-client';
 import * as util from './common';
+import { CppSettings } from './LanguageServer/settings';
+import { logAndReturn } from './Utility/Async/returns';
+import { is } from './Utility/System/guards';
 
 interface IPackageInfo {
     name: string;
@@ -76,20 +79,23 @@ export function getExperimentationService(): Promise<IExperimentationService> | 
     return initializationPromise;
 }
 
-export async function deactivate(): Promise<void> {
-    if (initializationPromise) {
-        try {
-            await initializationPromise;
-        } catch (e) {
-            // Continue even if we were not able to initialize the experimentation platform.
-        }
+// @ts-expect-error The function isExperimentEnabled will be used for future experiments.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function isExperimentEnabled(experimentName: string): Promise<boolean> {
+    if (new CppSettings().experimentalFeatures) {
+        return true;
     }
-    if (experimentationTelemetry) {
-        experimentationTelemetry.dispose();
-    }
+    const experimentationService: IExperimentationService | undefined = await getExperimentationService();
+    const isEnabled: boolean | undefined = experimentationService?.getTreatmentVariable<boolean>("vscode", experimentName);
+    return isEnabled ?? false;
 }
 
-export function logDebuggerEvent(eventName: string, properties?: { [key: string]: string }, metrics?: { [key: string]: number }): void {
+export async function deactivate(): Promise<void> {
+    await initializationPromise?.catch(logAndReturn.undefined);
+    await experimentationTelemetry?.dispose().catch(logAndReturn.undefined);
+}
+
+export function logDebuggerEvent(eventName: string, properties?: Record<string, string>, metrics?: Record<string, number>): void {
     const sendTelemetry = () => {
         if (experimentationTelemetry) {
             const eventNamePrefix: string = "cppdbg/VS/Diagnostics/Debugger/";
@@ -97,19 +103,15 @@ export function logDebuggerEvent(eventName: string, properties?: { [key: string]
         }
     };
 
-    if (initializationPromise) {
-        try {
-            // Use 'then' instead of 'await' because telemetry should be "fire and forget".
-            initializationPromise.then(sendTelemetry);
-            return;
-        } catch (e) {
-            // Continue even if we were not able to initialize the experimentation platform.
-        }
+    // simpler expression of the original:
+    // Uses 'then' instead of 'await' because telemetry should be "fire and forget".
+    if (is.promise(initializationPromise)) {
+        return void initializationPromise.catch(logAndReturn.undefined).then(sendTelemetry).catch(logAndReturn.undefined);
     }
     sendTelemetry();
 }
 
-export function logLanguageServerEvent(eventName: string, properties?: { [key: string]: string }, metrics?: { [key: string]: number }): void {
+export function logLanguageServerEvent(eventName: string, properties?: Record<string, string>, metrics?: Record<string, number>): void {
     const sendTelemetry = () => {
         if (experimentationTelemetry) {
             const eventNamePrefix: string = "C_Cpp/LanguageServer/";
@@ -117,14 +119,8 @@ export function logLanguageServerEvent(eventName: string, properties?: { [key: s
         }
     };
 
-    if (initializationPromise) {
-        try {
-            // Use 'then' instead of 'await' because telemetry should be "fire and forget".
-            initializationPromise.then(sendTelemetry);
-            return;
-        } catch (e) {
-            // Continue even if we were not able to initialize the experimentation platform.
-        }
+    if (is.promise(initializationPromise)) {
+        return void initializationPromise.catch(logAndReturn.undefined).then(sendTelemetry).catch(logAndReturn.undefined);
     }
     sendTelemetry();
 }

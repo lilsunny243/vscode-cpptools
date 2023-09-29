@@ -6,7 +6,7 @@
 'use strict';
 
 const gulp = require('gulp');
-const eslint = require('gulp-eslint');
+
 const fs = require('fs');
 const nls = require('vscode-nls-dev');
 const path = require('path');
@@ -57,20 +57,6 @@ const languages = [
     { id: "cs", folderName: "csy" },
     { id: "pl", folderName: "plk" }
 ];
-
-/// Misc Tasks
-const allTypeScript = [
-    'src/**/*.ts',
-    '!**/*.d.ts',
-    '!**/typings**'
-];
-
-gulp.task('lint', function () {
-    return gulp.src(allTypeScript)
-        .pipe(eslint({ configFile: ".eslintrc.js" }))
-        .pipe(eslint.format())
-        .pipe(eslint.failAfterError());
-});
 
 
 // ****************************
@@ -244,25 +230,25 @@ gulp.task("translations-export", (done) => {
     // Merge files from all source streams
     es.merge(jsStream, htmlStream, jsonSchemaStream)
 
-    // Filter down to only the files we need
-    .pipe(filter(['**/*.nls.json', '**/*.nls.metadata.json']))
+        // Filter down to only the files we need
+        .pipe(filter(['**/*.nls.json', '**/*.nls.metadata.json']))
 
-    // Consoldate them into nls.metadata.json, which the xlf is built from.
-    .pipe(nls.bundleMetaDataFiles('ms-vscode.cpptools', '.'))
+        // Consoldate them into nls.metadata.json, which the xlf is built from.
+        .pipe(nls.bundleMetaDataFiles('ms-vscode.cpptools', '.'))
 
-    // filter down to just the resulting metadata files
-    .pipe(filter(['**/nls.metadata.header.json', '**/nls.metadata.json']))
+        // filter down to just the resulting metadata files
+        .pipe(filter(['**/nls.metadata.header.json', '**/nls.metadata.json']))
 
-    // Add package.nls.json, used to localized package.json
-    .pipe(gulp.src(["package.nls.json"]))
+        // Add package.nls.json, used to localized package.json
+        .pipe(gulp.src(["package.nls.json"]))
 
-    // package.nls.json and nls.metadata.json are used to generate the xlf file
-    // Does not re-queue any files to the stream.  Outputs only the XLF file
-    .pipe(nls.createXlfFiles(translationProjectName, translationExtensionName))
-    .pipe(gulp.dest(path.join("..", `${translationProjectName}-localization-export`)))
-    .pipe(es.wait(() => {
-        done();
-    }));
+        // package.nls.json and nls.metadata.json are used to generate the xlf file
+        // Does not re-queue any files to the stream.  Outputs only the XLF file
+        .pipe(nls.createXlfFiles(translationProjectName, translationExtensionName))
+        .pipe(gulp.dest(path.join("..", `${translationProjectName}-localization-export`)))
+        .pipe(es.wait(() => {
+            done();
+        }));
 });
 
 
@@ -286,9 +272,9 @@ gulp.task("translations-import", (done) => {
             .pipe(nls.prepareJsonFiles())
             .pipe(gulp.dest(path.join("./i18n", language.folderName)));
     }))
-    .pipe(es.wait(() => {
-        done();
-    }));
+        .pipe(es.wait(() => {
+            done();
+        }));
 });
 
 // ****************************
@@ -458,122 +444,3 @@ const generateJsonSchemaLoc = () => {
 
 gulp.task('translations-generate', gulp.series(generateSrcLocBundle, generateAdditionalLocFiles, generateHtmlLoc, generateWalkthroughHtmlLoc, generateJsonSchemaLoc));
 
-// ****************************
-// Command: generate-native-strings
-// The following is used to generate nativeStrings.ts and localized_string_ids.h from ./src/nativeStrings.json
-// If adding localized strings to the native side, start by adding it to nativeStrings.json and use this to generate the others.
-// ****************************
-
-// A gulp task to parse ./src/nativeStrings.json and generate nativeStrings.ts, and localized_string_ids.h
-gulp.task("generate-native-strings", (done) => {
-    const stringTable = jsonc.parse(fs.readFileSync('./src/nativeStrings.json').toString());
-
-    let nativeEnumContent = ""
-    let nativeStringTableContent = "";
-    let typeScriptSwitchContent = "";
-
-    let stringIndex = 1;
-    for (let property in stringTable) {
-        let stringValue = stringTable[property];
-        let hintValue;
-        if (typeof stringValue !== "string") {
-            hintValue = stringValue.hint;
-            stringValue = stringValue.text;
-        }
-
-        // Add to native enum
-        nativeEnumContent += `    ${property} = ${stringIndex},\n`;
-
-        // Add to native string table
-        nativeStringTableContent += `    ${JSON.stringify(stringValue)},\n`;
-
-        // Add to TypeScript switch
-        // Skip empty strings, which can be used to prevent enum/index reordering
-        if (stringValue != "") {
-            // It's possible that a translation may skip "{#}" entries, so check for up to 50 of them.
-            let numArgs = 0;
-            for (let i = 0; i < 50; i++) {
-                if (stringValue.includes(`{${i}}`)) {
-                    numArgs = i + 1;
-                }
-            }
-            typeScriptSwitchContent += `        case ${stringIndex}:\n`;
-            if (numArgs != 0) {
-                typeScriptSwitchContent += `            if (stringArgs) {\n`;
-                if (hintValue) {
-                    typeScriptSwitchContent += `                message = localize({ key: ${JSON.stringify(property)}, comment: [${JSON.stringify(hintValue)}] }, ${JSON.stringify(stringValue)}`;
-                } else {
-                    typeScriptSwitchContent += `                message = localize(${JSON.stringify(property)}, ${JSON.stringify(stringValue)}`;
-                }
-                for (let i = 0; i < numArgs; i++) {
-                    typeScriptSwitchContent += `, stringArgs[${i}]`;
-                }
-                typeScriptSwitchContent += `);\n                break;\n            }\n`;
-            }
-            if (hintValue) {
-                typeScriptSwitchContent += `            message = localize({ key: ${JSON.stringify(property)}, comment: [${JSON.stringify(hintValue)}] }, ${JSON.stringify(stringValue)}`;
-            } else {
-                typeScriptSwitchContent += `            message = localize(${JSON.stringify(property)}, ${JSON.stringify(stringValue)}`;
-            }
-            typeScriptSwitchContent += `);\n            break;\n`;
-        }
-        ++stringIndex;
-    };
-
-    let typeScriptContent = `/* --------------------------------------------------------------------------------------------
- * Copyright (c) Microsoft Corporation. All Rights Reserved.
- * See 'LICENSE' in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
-
-// ****** This file is generated from nativeStrings.json.  Do not edit this file directly. ******
-
-'use strict';
-
-import * as nls from 'vscode-nls';
-
-nls.config({ messageFormat: nls.MessageFormat.bundle, bundleFormat: nls.BundleFormat.standalone })();
-const localize: nls.LocalizeFunc = nls.loadMessageBundle();
-
-export const localizedStringCount: number = ${stringIndex};
-
-export function lookupString(stringId: number, stringArgs?: string[]): string {
-    let message: string = "";
-    switch (stringId) {
-        case 0:
-            // Special case for blank string
-            break;
-${typeScriptSwitchContent}
-        default:
-            console.assert(\"Unrecognized string ID\");
-            break;
-    }
-    return message;
-}
-`;
-    console.log("Writing file: ./src/nativeStrings.ts");
-    fs.writeFileSync("./src/nativeStrings.ts", typeScriptContent, 'utf8');
-
-    let nativeContents = `/* --------------------------------------------------------------------------------------------
- * Copyright (c) Microsoft Corporation. All Rights Reserved.
- * See 'LICENSE' in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
-
-// ****** This file is generated from nativeStrings.json.  Do not edit this file directly. ******
-
-#pragma once
-// NOLINTBEGIN(modernize-raw-string-literal)
-enum class localized_string_id : unsigned int
-{
-    blank = 0,
-${nativeEnumContent}};
-
-inline static const char *localizable_strings[] = {
-    "",
-${nativeStringTableContent}};
-// NOLINTEND(modernize-raw-string-literal)
-`;
-
-    console.log("Writing file: localized_string_ids.h -- If changed, copy to VS repo: src/vc/designtime/vscode/Common/generated/");
-    fs.writeFileSync("localized_string_ids.h", nativeContents, 'utf8');
-    done();
-});

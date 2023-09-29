@@ -4,25 +4,27 @@
  * ------------------------------------------------------------------------------------------ */
 'use strict';
 
-import * as DebuggerExtension from './Debugger/extension';
-import * as LanguageServer from './LanguageServer/extension';
 import * as os from 'os';
 import * as path from 'path';
-import * as Telemetry from './telemetry';
-import * as util from './common';
 import * as vscode from 'vscode';
+import * as DebuggerExtension from './Debugger/extension';
+import * as LanguageServer from './LanguageServer/extension';
+import * as util from './common';
+import * as Telemetry from './telemetry';
 
-import { CppToolsApi, CppToolsExtension } from 'vscode-cpptools';
-import { PlatformInformation } from './platform';
-import { CppTools1 } from './cppTools1';
-import { CppSettings } from './LanguageServer/settings';
-import { PersistentState } from './LanguageServer/persistentState';
-import { TargetPopulation } from 'vscode-tas-client';
 import * as semver from 'semver';
+import { CppToolsApi, CppToolsExtension } from 'vscode-cpptools';
 import * as nls from 'vscode-nls';
-import { cppBuildTaskProvider, CppBuildTaskProvider } from './LanguageServer/cppBuildTaskProvider';
+import { TargetPopulation } from 'vscode-tas-client';
+import { CppBuildTaskProvider, cppBuildTaskProvider } from './LanguageServer/cppBuildTaskProvider';
 import { getLocaleId, getLocalizedHtmlPath } from './LanguageServer/localization';
+import { PersistentState } from './LanguageServer/persistentState';
+import { CppSettings } from './LanguageServer/settings';
+import { logAndReturn, returns } from './Utility/Async/returns';
+import { CppTools1 } from './cppTools1';
+import { logMachineIdMappings } from './id';
 import { disposeOutputChannels, log } from './logger';
+import { PlatformInformation } from './platform';
 
 nls.config({ messageFormat: nls.MessageFormat.bundle, bundleFormat: nls.BundleFormat.standalone })();
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
@@ -40,7 +42,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<CppToo
     // Register a protocol handler to serve localized versions of the schema for c_cpp_properties.json
     class SchemaProvider implements vscode.TextDocumentContentProvider {
         public async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
-            console.assert(uri.path[0] === '/', "A preceeding slash is expected on schema uri path");
+            console.assert(uri.path[0] === '/', "A preceding slash is expected on schema uri path");
             const fileName: string = uri.path.substring(1);
             const locale: string = getLocaleId();
             let localizedFilePath: string = util.getExtensionFilePath(path.join("dist/schema/", locale, fileName));
@@ -82,11 +84,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<CppToo
     // to ensure there is no potential race condition. LanguageServer.activate() is called near the end of this
     // function, to allow any further setup to occur here, prior to activation.
     const isIntelliSenseEngineDisabled: boolean = settings.intelliSenseEngine === "disabled";
-    const shouldActivateLanguageServer: boolean = (!isIntelliSenseEngineDisabled && !isOldMacOs);
+    const shouldActivateLanguageServer: boolean = !isIntelliSenseEngineDisabled && !isOldMacOs;
 
     if (isOldMacOs) {
         languageServiceDisabled = true;
-        vscode.window.showErrorMessage(localize("macos.version.deprecated", "Versions of the C/C++ extension more recent than {0} require at least macOS version {1}.", "1.9.8", "10.12"));
+        void vscode.window.showErrorMessage(localize("macos.version.deprecated", "Versions of the C/C++ extension more recent than {0} require at least macOS version {1}.", "1.9.8", "10.12"));
     } else {
         if (settings.intelliSenseEngine === "disabled") {
             languageServiceDisabled = true;
@@ -99,11 +101,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<CppToo
                     // If switching from disabled to enabled, we can continue activation.
                     currentIntelliSenseEngineValue = settings.intelliSenseEngine;
                     languageServiceDisabled = false;
-                    LanguageServer.activate();
+                    return LanguageServer.activate();
                 } else {
                     // We can't deactivate or change engines on the fly, so prompt for window reload.
                     reloadMessageShown = true;
-                    util.promptForReloadWindowDueToSettingsChange();
+                    void util.promptForReloadWindowDueToSettingsChange();
                 }
             }
         }));
@@ -114,7 +116,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<CppToo
             const config: string = path.join(vscode.workspace.workspaceFolders[i].uri.fsPath, ".vscode/c_cpp_properties.json");
             if (await util.checkFileExists(config)) {
                 const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(config);
-                vscode.languages.setTextDocumentLanguage(doc, "jsonc");
+                void vscode.languages.setTextDocumentLanguage(doc, "jsonc");
+                util.setWorkspaceIsCpp();
             }
         }
     }
@@ -149,10 +152,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<CppToo
 
 export async function deactivate(): Promise<void> {
     DebuggerExtension.dispose();
-    Telemetry.deactivate();
+    void Telemetry.deactivate().catch(returns.undefined);
     disposables.forEach(d => d.dispose());
     if (languageServiceDisabled) {
-        return Promise.resolve();
+        return;
     }
     await LanguageServer.deactivate();
     disposeOutputChannels();
@@ -212,6 +215,7 @@ function sendTelemetry(info: PlatformInformation): void {
             break;
     }
     Telemetry.logDebuggerEvent("acquisition", telemetryProperties);
+    logMachineIdMappings().catch(logAndReturn.undefined);
 }
 
 async function checkVsixCompatibility(): Promise<void> {
@@ -289,15 +293,14 @@ async function checkVsixCompatibility(): Promise<void> {
                     promise = vscode.window.showWarningMessage(localize("vsix.platform.mismatching", "The C/C++ extension installed is compatible with but does not match your system.", vsixTargetPlatform), moreInfoButton, ignoreButton);
                 }
             }
-            if (promise) {
-                promise.then(async (value) => {
-                    if (value === moreInfoButton) {
-                        await vscode.commands.executeCommand("markdown.showPreview", vscode.Uri.file(getLocalizedHtmlPath("Reinstalling the Extension.md")));
-                    } else if (value === ignoreButton) {
-                        ignoreMismatchedCompatibleVsix.Value = true;
-                    }
-                });
-            }
+
+            void promise?.then((value) => {
+                if (value === moreInfoButton) {
+                    void vscode.commands.executeCommand("markdown.showPreview", vscode.Uri.file(getLocalizedHtmlPath("Reinstalling the Extension.md")));
+                } else if (value === ignoreButton) {
+                    ignoreMismatchedCompatibleVsix.Value = true;
+                }
+            }, logAndReturn.undefined);
         } else {
             console.log("Unable to find TargetPlatform in .vsixmanifest");
         }

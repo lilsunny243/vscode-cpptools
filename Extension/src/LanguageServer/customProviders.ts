@@ -5,9 +5,9 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { CustomConfigurationProvider, Version, SourceFileConfigurationItem, WorkspaceBrowseConfiguration } from 'vscode-cpptools';
-import { CppSettings } from './settings';
+import { CustomConfigurationProvider, SourceFileConfigurationItem, Version, WorkspaceBrowseConfiguration } from 'vscode-cpptools';
 import * as ext from './extension';
+import { CppSettings } from './settings';
 
 /**
  * An interface that is guaranteed to be backward compatible with version 0
@@ -172,7 +172,7 @@ export class CustomConfigurationProviderCollection {
         let exists: boolean = false;
         const existing: CustomProviderWrapper | undefined = this.providers.get(wrapper.extensionId);
         if (existing) {
-            exists = (existing.version === Version.v0 && wrapper.version === Version.v0);
+            exists = existing.version === Version.v0 && wrapper.version === Version.v0;
         }
 
         if (!exists) {

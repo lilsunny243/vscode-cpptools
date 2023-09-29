@@ -4,9 +4,10 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as vscode from 'vscode';
-import { stripEscapeSequences, isWindows, escapeStringForRegex, ISshHostInfo, getFullHostAddress, extensionContext } from '../common';
-import { getOutputChannelLogger } from '../logger';
 import * as nls from 'vscode-nls';
+import { escapeStringForRegex, extensionContext, getFullHostAddress, ISshHostInfo, stripEscapeSequences } from '../common';
+import { isWindows } from '../constants';
+import { getOutputChannelLogger } from '../logger';
 
 nls.config({ messageFormat: nls.MessageFormat.bundle, bundleFormat: nls.BundleFormat.standalone })();
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
@@ -45,14 +46,12 @@ export interface IInteractor {
 export class MitmInteractor implements IInteractor {
     static ID = 'mitm';
 
-    constructor() { }
-
     get id(): string {
         return MitmInteractor.ID;
     }
 
     async onData(data: string): Promise<IInteraction> {
-        if (!!data.match('Port forwarding is disabled to avoid man-in-the-middle attacks.')) {
+        if (data.match('Port forwarding is disabled to avoid man-in-the-middle attacks.')) {
             throw Error('Port forwarding is disabled to avoid man-in-the-middle attacks.');
         }
 
@@ -92,7 +91,7 @@ export class FingerprintInteractor implements IInteractor {
                 result.canceled = true;
             }
         } else if (
-            isWindows() &&
+            isWindows &&
             (data.includes('The authenticity of host ') || (data === '' && extraDetails?.detectedServerKey))
         ) {
             // hack for #1195
@@ -120,6 +119,7 @@ export class DifferingHostKeyInteractor implements IInteractor {
     get id(): string {
         return DifferingHostKeyInteractor.ID;
     }
+
     async onData(data: string, cancelToken?: vscode.CancellationToken, _extraDetails?: IInteractorDataDetails): Promise<IInteraction> {
         const result: IInteraction = { postAction: 'keep' };
         data = data.trim();
@@ -344,7 +344,7 @@ export class ConnectionFailureInteractor implements IInteractor {
         const result: IInteraction = { postAction: 'keep' };
         if (data.includes('Connection refused') || data.includes('Could not resolve hostname')) {
             result.postAction = 'consume';
-            getOutputChannelLogger().showErrorMessage(localize('failed.to.connect', 'Failed to connect to {0}', this.hostName));
+            void getOutputChannelLogger().showErrorMessage(localize('failed.to.connect', 'Failed to connect to {0}', this.hostName));
         }
         return result;
     }

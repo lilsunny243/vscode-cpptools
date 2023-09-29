@@ -177,18 +177,21 @@
         "text": "+%d specializations",
         "hint": "Refers to C++ template specializations. This is part of a description indicating there are N additional specializations of a function.  %d is replaced with that number."
     },
-    "compiler": {
-        "text": "Note: IntelliSense is not fully configured. Use the 'Select Default Compiler' command to finish configuration."
+    "intellisense_configuration": {
+        "text": "Note: IntelliSense is not fully configured. Use the 'Select IntelliSense Configuration...' command to finish configuration."
+    },
+    "select_intellisense_configuration": {
+        "text": "Select an IntelliSense configuration to locate system headers"
     },
     "expands_to": "Expands to:",
     "attention_label": "Attention:",
     "author_label": "Author:",
     "authors_label": "Authors:",
     "bug_label": "Bug:",
-    "copyright_label" : "Copyright:",
+    "copyright_label": "Copyright:",
     "deprecated_label": "Deprecated:",
-    "date_label" : "Date:",
-    "details_label" : "Details:",
+    "date_label": "Date:",
+    "details_label": "Details:",
     "exceptions_label": {
         "text": "Exceptions:",
         "hint": "This label is for describing the exceptions thrown by a function. Usage example: Exception: std::out_of_range parameter is out of range."
@@ -246,6 +249,10 @@
     "failed_to_query_for_standard_version": "Failed to query compiler at path \"{0}\" for default standard versions.  Compiler querying is disabled for this compiler.",
     "unrecognized_language_standard_version": "Compiler query returned an unrecognized language standard version.  The latest supported version will be used instead.",
     "intellisense_process_crash_detected": "IntelliSense process crash detected.",
+    "intellisense_feature_crash_detected": {
+        "text": "IntelliSense process crash detected: {0}",
+        "hint": "`{0}` will be substituted with `<feature name>`."
+    },
     "return_values_label": {
         "text": "Return values:",
         "hint": "This label is for the return values description for a function. Usage example: 'Return values: 1 if key is found. 2 if input can't be read. 3 if input is empty.'"
@@ -265,7 +272,7 @@
     "multiple_locations_note": "(Multiple locations)",
     "folder_tag": "Folder",
     "file_tag": "File",
-    "compiler_default_language_standard_version_old" : "Compiler returned default language standard version: {0}. Since this version is old, will try to use newer version {1} as default.",
+    "compiler_default_language_standard_version_old": "Compiler returned default language standard version: {0}. Since this version is old, will try to use newer version {1} as default.",
     "unexpected_output_from_clang_tidy": "Unexpected output from clang-tidy: {0}. Expected: {1}.",
     "generate_doxygen_comment": "Generate Doxygen comment",
     "offer_create_declaration": {
@@ -390,52 +397,59 @@
         "hint": "%s is the file that could not be created."
     },
     "e_access_file": {
-        "text":  "Cannot access directory or file '%s' for writing.",
+        "text": "Cannot access directory or file '%s' for writing.",
         "hint": "%s is the directory or file that could not be accessed for writing."
     },
     "e_invalid_pathname": {
-        "text":  "Invalid file path: '%s'.",
+        "text": "Invalid file path: '%s'.",
         "hint": "%s is the file that has an invalid path."
     },
     "e_cm_file_not_in_project": {
-        "text":  "File '%s' was not found.",
-        "hint": "%s is the file that was not found."
-    },
-    "refactor_create_declaration_definition_failed":
-    {
-        "text": "Create Declaration / Definition failed: %s",
-        "hint": "The operation 'Create Declaration / Definition' on a function was not successful. %s is the error info that has a period at the end of the string."
-    },
-    "refactor_create_default_delete":
-    {
-        "text": "Unable to create function '%s'. Creating defaulted or deleted functions is not supported.",
-        "hint": "%s is the function that could not be created."
-    },
-    "refactor_function_copied_to_clipboard": "The function signature was copied to the clipboard.",
-    "refactor_function_not_created":
-    {
-        "text": "Unable to create function '%s'.",
-        "hint": "%s is the function that could not be created."
-    },
-    "refactor_ambiguous_locations":
-    {
-        "text": "Unable to find an unambiguous location for function '%s'.",
-        "hint": "%s is the function for the unambiguous location."
-    },
-    "refactor_file_not_in_project":
-    {
         "text": "File '%s' was not found.",
         "hint": "%s is the file that was not found."
     },
-    "refactor_not_class_namespace":
-    {
+    "refactor_create_declaration_definition_failed": {
+        "text": "Create Declaration / Definition failed: %s",
+        "hint": "The operation 'Create Declaration / Definition' on a function was not successful. %s is the error info that has a period at the end of the string."
+    },
+    "refactor_create_default_delete": {
+        "text": "Unable to create function '%s'. Creating defaulted or deleted functions is not supported.",
+        "hint": "%s is the function that could not be created."
+    },
+    "refactor_function_not_created": {
+        "text": "Unable to create function '%s'.",
+        "hint": "%s is the function that could not be created."
+    },
+    "refactor_ambiguous_locations": {
+        "text": "Unable to find an unambiguous location for function '%s'.",
+        "hint": "%s is the function for the unambiguous location."
+    },
+    "refactor_file_not_in_project": {
+        "text": "File '%s' was not found.",
+        "hint": "%s is the file that was not found."
+    },
+    "refactor_not_class_namespace": {
         "text": "Could not find class or namespace '%s'.",
         "hint": "%s is the class or namespace code that could not be found."
     },
-    "refactor_operation_unsupported":
-    {
+    "refactor_operation_unsupported": {
         "text": "The operation is not supported for '%s'.",
         "hint": "%s is the function that is not supported for an operation that involves automatically generating code."
     },
-    "unknown_error": "Unknown error."
+    "unknown_error": "Unknown error.",
+    "run_select_intellisense_configuration": {
+        "text": "Please run the 'Select IntelliSense Configuration...' command to locate your system headers."
+    },
+    "offer_copy_declaration": {
+        "text": "Copy declaration of '{0}'",
+        "hint": "{0} is the name of a C/C++ function."
+    },
+    "offer_copy_definition": {
+        "text": "Copy definition of '{0}'",
+        "hint": "{0} is the name of a C/C++ function."
+    },
+    "refactor_copy_declaration_definition_failed": {
+        "text": "Copying Declaration / Definition to clipboard failed: %s",
+        "hint": "The operation 'Copy Declaration / Definition' on a function was not successful. %s is the error info that has a period at the end of the string."
+    }
 }

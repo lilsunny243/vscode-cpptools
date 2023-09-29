@@ -6,12 +6,12 @@
 
 import { CustomConfigurationProvider, Version } from 'vscode-cpptools';
 import { CppToolsTestApi, CppToolsTestHook } from 'vscode-cpptools/out/testApi';
-import { CustomConfigurationProvider1, getCustomConfigProviders, CustomConfigurationProviderCollection } from './LanguageServer/customProviders';
-import { getOutputChannel } from './logger';
-import * as LanguageServer from './LanguageServer/extension';
-import * as test from './testHook';
 import * as nls from 'vscode-nls';
+import { CustomConfigurationProvider1, CustomConfigurationProviderCollection, getCustomConfigProviders } from './LanguageServer/customProviders';
+import * as LanguageServer from './LanguageServer/extension';
 import { CppSettings } from './LanguageServer/settings';
+import { getOutputChannel } from './logger';
+import * as test from './testHook';
 
 nls.config({ messageFormat: nls.MessageFormat.bundle, bundleFormat: nls.BundleFormat.standalone })();
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
@@ -65,7 +65,7 @@ export class CppTools implements CppToolsTestApi {
                     getOutputChannel().appendLine(localize("provider.registered", "Custom configuration provider '{0}' registered", added.name));
                 }
                 this.providers.push(added);
-                LanguageServer.getClients().forEach(client => client.onRegisterCustomConfigurationProvider(added));
+                LanguageServer.getClients().forEach(client => void client.onRegisterCustomConfigurationProvider(added));
                 this.addNotifyReadyTimer(added);
             }
         } else {
@@ -81,8 +81,8 @@ export class CppTools implements CppToolsTestApi {
             this.removeNotifyReadyTimer(p);
             p.isReady = true;
             LanguageServer.getClients().forEach(client => {
-                client.updateCustomBrowseConfiguration(p);
-                client.updateCustomConfigurations(p);
+                void client.updateCustomBrowseConfiguration(p);
+                void client.updateCustomConfigurations(p);
             });
         } else if (this.failedRegistrations.find(p => p === provider)) {
             console.warn("provider not successfully registered; 'notifyReady' ignored");
@@ -99,7 +99,7 @@ export class CppTools implements CppToolsTestApi {
             if (!p.isReady) {
                 console.warn("didChangeCustomConfiguration was invoked before notifyReady");
             }
-            LanguageServer.getClients().forEach(client => client.updateCustomConfigurations(p));
+            LanguageServer.getClients().forEach(client => void client.updateCustomConfigurations(p));
         } else if (this.failedRegistrations.find(p => p === provider)) {
             console.warn("provider not successfully registered, 'didChangeCustomConfiguration' ignored");
         } else {
@@ -112,7 +112,7 @@ export class CppTools implements CppToolsTestApi {
         const p: CustomConfigurationProvider1 | undefined = providers.get(provider);
 
         if (p) {
-            LanguageServer.getClients().forEach(client => client.updateCustomBrowseConfiguration(p));
+            LanguageServer.getClients().forEach(client => void client.updateCustomBrowseConfiguration(p));
         } else if (this.failedRegistrations.find(p => p === provider)) {
             console.warn("provider not successfully registered, 'didChangeCustomBrowseConfiguration' ignored");
         } else {

@@ -15,7 +15,7 @@ const config = {
 
     entry: './src/main.ts', // the entry point of this extension, 📖 -> https://webpack.js.org/configuration/entry-context/
     output: { // the bundle is stored in the 'dist' folder (check package.json), 📖 -> https://webpack.js.org/configuration/output/
-        path: path.resolve(__dirname, 'dist'),
+        path: path.resolve(__dirname, 'dist', 'src'),
         filename: 'main.js',
         libraryTarget: "commonjs2",
         devtoolModuleFilenameTemplate: "../[resource-path]",
@@ -28,8 +28,8 @@ const config = {
         vscode: "commonjs vscode" // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
     },
     resolve: { // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
-        extensions: ['.ts', '.js'],
-        mainFields: ['main', 'module']
+        extensions: ['.js', '.ts',],
+        mainFields: ['main', 'module'],
     },
     module: {
         rules: [{
@@ -41,11 +41,11 @@ const config = {
                 loader: 'ts-loader',
                 options: {
                     compilerOptions: {
-                        "sourceMap": true,
+                        "inlineSourceMap": true,
                     }
                 }
             }]
-        },{
+        }, {
             test: /.node$/,
             loader: 'node-loader',
         }]
@@ -61,14 +61,14 @@ const config = {
 module.exports = (env) => {
     if (env.vscode_nls) {
         // rewrite nls call when being asked for
+        // @ts-ignore
         config.module.rules.unshift({
             loader: 'vscode-nls-dev/lib/webpack-loader',
             options: {
-                base: __dirname
+                base: `${__dirname}/src`
             }
         })
     }
 
     return config
-  };
-
+};

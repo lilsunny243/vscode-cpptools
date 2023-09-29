@@ -167,7 +167,8 @@
 	"overloads": "+%d Überladungen",
 	"specialization": "+1 Spezialisierung",
 	"specializations": "+%d Spezialisierungen",
-	"compiler": "Hinweis: IntelliSense ist nicht vollständig konfiguriert. Verwenden Sie den Befehl \"Standardcompiler auswählen\", um die Konfiguration abzuschließen.",
+	"intellisense_configuration": "Hinweis: IntelliSense ist nicht vollständig konfiguriert. Verwenden Sie den Befehl \"IntelliSense-Konfiguration auswählen...\", um die Konfiguration abzuschließen.",
+	"select_intellisense_configuration": "Wählen Sie eine IntelliSense-Konfiguration aus, um nach Systemheadern zu suchen.",
 	"expands_to": "Wird erweitert auf:",
 	"attention_label": "Achtung:",
 	"author_label": "Autor:",
@@ -286,11 +287,14 @@
 	"e_cm_file_not_in_project": "Datei '%s' nicht gefunden",
 	"refactor_create_declaration_definition_failed": "Fehler beim Erstellen der Deklaration/Definition: %s",
 	"refactor_create_default_delete": "Die Funktion \"%s\" kann nicht erstellt werden. Das Erstellen standardmäßiger oder gelöschter Funktionen wird nicht unterstützt.",
-	"refactor_function_copied_to_clipboard": "Die Funktionssignatur wurde in die Zwischenablage kopiert.",
 	"refactor_function_not_created": "Erstellen der Funktion '%s' nicht möglich.",
 	"refactor_ambiguous_locations": "Es wurde kein eindeutiger Speicherort für Funktion '%s' gefunden.",
 	"refactor_file_not_in_project": "Datei '%s' nicht gefunden",
 	"refactor_not_class_namespace": "Klasse oder Namespace '%s' wurde nicht gefunden.",
 	"refactor_operation_unsupported": "Der Vorgang wird für '%s' nicht unterstützt.",
-	"unknown_error": "Unbekannter Fehler."
+	"unknown_error": "Unbekannter Fehler.",
+	"run_select_intellisense_configuration": "Führen Sie den Befehl „IntelliSense-Konfiguration auswählen...“ aus, um nach Ihren Systemheadern zu suchen.",
+	"offer_copy_declaration": "Deklaration von \"{0}\" kopieren",
+	"offer_copy_definition": "Definition von \"{0}\" kopieren",
+	"refactor_copy_declaration_definition_failed": "Fehler beim Kopieren der Deklaration/Definition in die Zwischenablage: %s"
 }

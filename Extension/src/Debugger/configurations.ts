@@ -4,8 +4,8 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as os from 'os';
-import * as nls from 'vscode-nls';
 import * as vscode from 'vscode';
+import * as nls from 'vscode-nls';
 import { configPrefix } from '../LanguageServer/extension';
 
 nls.config({ messageFormat: nls.MessageFormat.bundle, bundleFormat: nls.BundleFormat.standalone })();
@@ -26,8 +26,8 @@ export enum DebuggerType {
 }
 
 export enum DebuggerEvent {
-    debugPanel = "debugPanel",  // F5 or "Run and Debug" Panel
-    playButton = "playButton",   // "Run and Debug" play button
+    debugPanel = "debugPanel", // F5 or "Run and Debug" Panel
+    playButton = "playButton", // "Run and Debug" play button
     addConfigGear = "AddConfigGear"
 }
 
@@ -35,14 +35,14 @@ export enum TaskStatus {
     recentlyUsed = "Recently Used Task", // A configured task that has been used recently.
 
     configured = "Configured Task", // The tasks that are configured in tasks.json file.
-    detected = "Detected Task"      // The tasks that are available based on detected compilers.
+    detected = "Detected Task" // The tasks that are available based on detected compilers.
 }
 
 export enum ConfigSource {
-    singleFile = "singleFile",              // a debug config defined for a single mode file
-    workspaceFolder = "workspaceFolder",    // a debug config defined in launch.json
-    workspace = "workspace",                // a debug config defined in workspace level
-    global = "global",                      // a debug config defined in user level
+    singleFile = "singleFile", // a debug config defined for a single mode file
+    workspaceFolder = "workspaceFolder", // a debug config defined in launch.json
+    workspace = "workspace", // a debug config defined in workspace level
+    global = "global", // a debug config defined in user level
     unknown = "unknown"
 }
 

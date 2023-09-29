@@ -2,21 +2,18 @@
  * Copyright (c) Microsoft Corporation. All Rights Reserved.
  * See 'LICENSE' in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-/* eslint-disable no-unused-expressions */
-import * as path from 'path';
-import {
-    TaskDefinition, Task, TaskGroup, ShellExecution, workspace,
-    TaskProvider, TaskScope, CustomExecution, ProcessExecution, TextEditor, Pseudoterminal, EventEmitter, Event, TerminalDimensions, window, WorkspaceFolder, tasks, TaskExecution, TaskEndEvent, Disposable
-} from 'vscode';
+
+import * as cp from "child_process";
 import * as os from 'os';
+import * as path from 'path';
+import { CustomExecution, Disposable, Event, EventEmitter, ProcessExecution, Pseudoterminal, ShellExecution, Task, TaskDefinition, TaskEndEvent, TaskExecution, TaskGroup, TaskProvider, tasks, TaskScope, TerminalDimensions, TextEditor, window, workspace, WorkspaceFolder } from 'vscode';
+import * as nls from 'vscode-nls';
 import * as util from '../common';
 import * as telemetry from '../telemetry';
 import { Client } from './client';
 import * as configs from './configurations';
 import * as ext from './extension';
-import * as cp from "child_process";
 import { OtherSettings } from './settings';
-import * as nls from 'vscode-nls';
 
 nls.config({ messageFormat: nls.MessageFormat.bundle, bundleFormat: nls.BundleFormat.standalone })();
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
@@ -30,15 +27,17 @@ export interface CppBuildTaskDefinition extends TaskDefinition {
 }
 
 export class CppBuildTask extends Task {
-    detail?: string;
     existing?: boolean;
     isDefault?: boolean;
 }
 
+interface BuildOptions {
+    taskUsesActiveFile: boolean;
+    insertStd?: boolean;
+}
+
 export class CppBuildTaskProvider implements TaskProvider {
     static CppBuildScriptType: string = 'cppbuild';
-
-    constructor() { }
 
     public async provideTasks(): Promise<CppBuildTask[]> {
         return this.getTasks(false);
@@ -76,7 +75,7 @@ export class CppBuildTaskProvider implements TaskProvider {
         }
 
         // Don't offer tasks for header files.
-        const isHeader: boolean = util.isHeaderFile (editor.document.uri);
+        const isHeader: boolean = util.isHeaderFile(editor.document.uri);
         if (isHeader) {
             return emptyTasks;
         }
@@ -130,16 +129,16 @@ export class CppBuildTaskProvider implements TaskProvider {
                 ) &&
                 (
                     !isCompilerValid || (!!userCompilerPathAndArgs &&
-                    (path.basename(info.path) !== userCompilerPathAndArgs.compilerName))
+                        (path.basename(info.path) !== userCompilerPathAndArgs.compilerName))
                 ) &&
                 (
                     !isWindows || !info.path.startsWith("/")
                 );
             const cl_to_add: configs.KnownCompiler | undefined = userCompilerIsCl ? undefined : knownCompilers.find(info =>
-                ((path.basename(info.path) === "cl.exe") && compiler_condition(info)));
+                (path.basename(info.path) === "cl.exe") && compiler_condition(info));
             knownCompilers = knownCompilers.filter(info =>
-                ((info === cl_to_add) || (path.basename(info.path) !== "cl.exe" && compiler_condition(info))));
-            knownCompilers.map<void>(info => {
+                (info === cl_to_add) || (path.basename(info.path) !== "cl.exe" && compiler_condition(info)));
+            knownCompilers.forEach(info => {
                 knownCompilerPathsSet.add(info.path);
             });
         }
@@ -152,21 +151,25 @@ export class CppBuildTaskProvider implements TaskProvider {
         }
 
         // Create a build task per compiler path
-        let result: CppBuildTask[] = [];
-        // Tasks for known compiler paths
-        if (knownCompilerPaths) {
-            result = knownCompilerPaths.map<Task>(compilerPath => this.getTask(compilerPath, appendSourceToName, undefined));
-        }
+        const result: CppBuildTask[] = [];
+
         // Task for valid user compiler path setting
         if (isCompilerValid && userCompilerPath) {
             result.push(this.getTask(userCompilerPath, appendSourceToName, userCompilerPathAndArgs?.allCompilerArgs));
         }
+
+        // Tasks for known compiler paths
+        if (knownCompilerPaths) {
+            result.push(...knownCompilerPaths.map<Task>(compilerPath => this.getTask(compilerPath, appendSourceToName, undefined)));
+        }
+
         return result;
     }
 
     private getTask: (compilerPath: string, appendSourceToName: boolean, compilerArgs?: string[], definition?: CppBuildTaskDefinition, detail?: string) => Task = (compilerPath: string, appendSourceToName: boolean, compilerArgs?: string[], definition?: CppBuildTaskDefinition, detail?: string) => {
         const compilerPathBase: string = path.basename(compilerPath);
         const isCl: boolean = compilerPathBase.toLowerCase() === "cl.exe";
+        const isClang: boolean = !isCl && compilerPathBase.toLowerCase().includes("clang");
         // Double-quote the command if it is not already double-quoted.
         let resolvedcompilerPath: string = isCl ? compilerPathBase : compilerPath;
         if (resolvedcompilerPath && !resolvedcompilerPath.startsWith("\"") && resolvedcompilerPath.includes(" ")) {
@@ -176,14 +179,14 @@ export class CppBuildTaskProvider implements TaskProvider {
         if (!definition) {
             const isWindows: boolean = os.platform() === 'win32';
             const taskLabel: string = ((appendSourceToName && !compilerPathBase.startsWith(ext.configPrefix)) ?
-                ext.configPrefix : "") + compilerPathBase + " " + localize("build_active_file", "build active file");
+                ext.configPrefix : "") + compilerPathBase + " " + localize("build.active.file", "build active file");
             const programName: string = util.defaultExePath();
-            const isClang: boolean = !isCl && compilerPathBase.toLowerCase().includes("clang");
             let args: string[] = isCl ?
                 ['/Zi', '/EHsc', '/nologo', `/Fe${programName}`, '${file}'] :
                 isClang ?
                     ['-fcolor-diagnostics', '-fansi-escape-codes', '-g', '${file}', '-o', programName] :
                     ['-fdiagnostics-color=always', '-g', '${file}', '-o', programName];
+
             if (compilerArgs && compilerArgs.length > 0) {
                 args = args.concat(compilerArgs);
             }
@@ -206,18 +209,18 @@ export class CppBuildTaskProvider implements TaskProvider {
         const task: CppBuildTask = new Task(definition, scope, definition.label, ext.CppSourceStr,
             new CustomExecution(async (resolvedDefinition: TaskDefinition): Promise<Pseudoterminal> =>
                 // When the task is executed, this callback will run. Here, we setup for running the task.
-                new CustomBuildTaskTerminal(resolvedcompilerPath, resolvedDefinition.args, resolvedDefinition.options, taskUsesActiveFile)
+                new CustomBuildTaskTerminal(resolvedcompilerPath, resolvedDefinition.args, resolvedDefinition.options, {taskUsesActiveFile, insertStd: isClang && os.platform() === 'darwin'})
             ), isCl ? '$msCompile' : '$gcc');
 
         task.group = TaskGroup.Build;
-        task.detail = detail ? detail : localize("compiler_details", "compiler:") + " " + resolvedcompilerPath;
+        task.detail = detail ? detail : localize("compiler.details", "compiler:") + " " + resolvedcompilerPath;
 
         return task;
     };
 
     public async getJsonTasks(): Promise<CppBuildTask[]> {
         const rawJson: any = await this.getRawTasksJson();
-        const rawTasksJson: any = (!rawJson.tasks) ? new Array() : rawJson.tasks;
+        const rawTasksJson: any = !rawJson.tasks ? [] : rawJson.tasks;
         const buildTasksJson: CppBuildTask[] = rawTasksJson.map((task: any) => {
             if (!task.label || !task.type || task.type !== CppBuildTaskProvider.CppBuildScriptType) {
                 return null;
@@ -256,7 +259,7 @@ export class CppBuildTaskProvider implements TaskProvider {
     public async writeBuildTask(taskLabel: string, workspaceFolder?: WorkspaceFolder, setAsDefault: boolean = false): Promise<void> {
         const rawTasksJson: any = await this.getRawTasksJson(workspaceFolder);
         if (!rawTasksJson.tasks) {
-            rawTasksJson.tasks = new Array();
+            rawTasksJson.tasks = [];
         }
         // Check if the task exists in the user's task.json.
         if (rawTasksJson.tasks.find((task: any) => task.label && task.label === taskLabel)) {
@@ -291,7 +294,7 @@ export class CppBuildTaskProvider implements TaskProvider {
                 ...selectedTask.definition,
                 problemMatcher: selectedTask.problemMatchers,
                 group: setAsDefault ? { kind: "build", "isDefault": true } : "build",
-                detail: localize("task_generated_by_debugger", "Task generated by Debugger.")
+                detail: localize("task.generated.by.debugger", "Task generated by Debugger.")
             };
             rawTasksJson.tasks.push(newTask);
         }
@@ -353,18 +356,23 @@ class CustomBuildTaskTerminal implements Pseudoterminal {
     public get onDidClose(): Event<number> { return this.closeEmitter.event; }
     private endOfLine: string = "\r\n";
 
-    constructor(private command: string, private args: string[], private options: cp.ExecOptions | cp.SpawnOptions | undefined, private taskUsesActiveFile: boolean) {
+    constructor(private command: string, private args: string[], private options: cp.ExecOptions | cp.SpawnOptions | undefined, private buildOptions: BuildOptions) {
     }
 
     async open(_initialDimensions: TerminalDimensions | undefined): Promise<void> {
-        if (this.taskUsesActiveFile && !util.isCppOrCFile(window.activeTextEditor?.document.uri)) {
+        if (this.buildOptions.taskUsesActiveFile && !util.isCppOrCFile(window.activeTextEditor?.document.uri)) {
             this.writeEmitter.fire(localize("cannot.build.non.cpp", 'Cannot build and debug because the active file is not a C or C++ source file.') + this.endOfLine);
             this.closeEmitter.fire(-1);
             return;
         }
+
+        // TODO: Remove when compiler query work goes in and we can determine the standard version from TypeScript
+        if (this.buildOptions.taskUsesActiveFile && window.activeTextEditor?.document.languageId === 'cpp' && this.buildOptions.insertStd) {
+            this.args.unshift('-std=gnu++14');
+        }
         telemetry.logLanguageServerEvent("cppBuildTaskStarted");
         // At this point we can start using the terminal.
-        this.writeEmitter.fire(localize("starting_build", "Starting build...") + this.endOfLine);
+        this.writeEmitter.fire(localize("starting.build", "Starting build...") + this.endOfLine);
         await this.doBuild();
     }
 
@@ -392,7 +400,17 @@ class CustomBuildTaskTerminal implements Pseudoterminal {
             this.options = { "shell": true };
         }
         if (this.options.cwd) {
-            this.options.cwd = util.resolveVariables(this.options.cwd);
+            this.options.cwd = util.resolveVariables(this.options.cwd.toString());
+        } else {
+            const editor: TextEditor | undefined = window.activeTextEditor;
+            let folder: WorkspaceFolder | undefined = editor ? workspace.getWorkspaceFolder(editor.document.uri) : undefined;
+            if (!folder && workspace.workspaceFolders) {
+                // TODO: Use the workspace folder for the tasks.json?
+                folder = workspace.workspaceFolders[0];
+            }
+            if (folder) {
+                this.options.cwd = folder.uri.fsPath;
+            }
         }
 
         const splitWriteEmitter = (lines: string | Buffer) => {

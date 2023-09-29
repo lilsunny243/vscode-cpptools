@@ -5,10 +5,10 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { CppSettings } from './settings';
-import { getOutputChannel } from '../logger';
 import * as nls from 'vscode-nls';
 import { isString } from '../common';
+import { getOutputChannel } from '../logger';
+import { CppSettings } from './settings';
 
 nls.config({ messageFormat: nls.MessageFormat.bundle, bundleFormat: nls.BundleFormat.standalone })();
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
@@ -24,7 +24,7 @@ interface Rules {
     end: vscode.OnEnterRule[];
 }
 
-const escapeChars: RegExp = /[\\\^\$\*\+\?\{\}\(\)\.\!\=\|\[\]\ \/]/;  // characters that should be escaped.
+const escapeChars: RegExp = /[\\\^\$\*\+\?\{\}\(\)\.\!\=\|\[\]\ \/]/; // characters that should be escaped.
 
 // Insert '\\' in front of regexp escape chars.
 function escape(chars: string): string {
@@ -238,8 +238,8 @@ export function getLanguageConfig(languageId: string): vscode.LanguageConfigurat
 }
 
 export function getLanguageConfigFromPatterns(languageId: string, patterns?: (string | CommentPattern)[]): vscode.LanguageConfiguration {
-    const beginPatterns: string[] = [];       // avoid duplicate rules
-    const continuePatterns: string[] = [];    // avoid duplicate rules
+    const beginPatterns: string[] = []; // avoid duplicate rules
+    const continuePatterns: string[] = []; // avoid duplicate rules
     let duplicates: boolean = false;
     let beginRules: vscode.OnEnterRule[] = [];
     let continueRules: vscode.OnEnterRule[] = [];
@@ -271,7 +271,7 @@ export function getLanguageConfigFromPatterns(languageId: string, patterns?: (st
     if (duplicates) {
         getOutputChannel().appendLine(localize("duplicate.multiline.patterns", "Duplicate multiline comment patterns detected."));
     }
-    return { onEnterRules: beginRules.concat(continueRules).concat(endRules).filter(e => (e)) };    // Remove any 'undefined' entries
+    return { onEnterRules: beginRules.concat(continueRules).concat(endRules).filter(e => e) }; // Remove any 'undefined' entries
 }
 
 function constructCommentRules(comment: CommentPattern, languageId: string): Rules {

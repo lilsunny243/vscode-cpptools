@@ -4,9 +4,9 @@
  * ------------------------------------------------------------------------------------------ */
 'use strict';
 import * as vscode from 'vscode';
-import { ReferencesResult, ReferenceType, getReferenceTagString } from './references';
-import { ReferencesTreeDataProvider } from './referencesTreeDataProvider';
+import { getReferenceTagString, ReferencesResult, ReferenceType } from './references';
 import { ReferencesModel, TreeNode } from './referencesModel';
+import { ReferencesTreeDataProvider } from './referencesTreeDataProvider';
 
 export class FindAllRefsView {
     private referencesModel?: ReferencesModel;
@@ -27,15 +27,16 @@ export class FindAllRefsView {
         if (this.referencesModel) {
             hasResults = this.referencesModel.hasResults();
         }
-        vscode.commands.executeCommand('setContext', 'cppReferenceTypes:hasResults', hasResults);
+        void vscode.commands.executeCommand('setContext', 'cpptools.hasReferencesResults', hasResults);
     }
 
-    setData(results: ReferencesResult, isCanceled: boolean, groupByFile: boolean): void {
-        this.referencesModel = new ReferencesModel(results, isCanceled, groupByFile, () => { this.referenceViewProvider.refresh(); });
+    setData(results: ReferencesResult, groupByFile: boolean): void {
+        this.referencesModel = new ReferencesModel(results, results.isCanceled, groupByFile, () => { this.referenceViewProvider.refresh(); });
         this.referenceViewProvider.setModel(this.referencesModel);
     }
 
     clearData(): void {
+        this.referencesModel = undefined;
         this.referenceViewProvider.clear();
     }
 
@@ -63,7 +64,7 @@ export class FindAllRefsView {
             line += ref.filename;
             if (ref.referencePosition !== null && ref.referencePosition !== undefined) {
                 line += ":" + (ref.referencePosition.line + 1) + ":" + (ref.referencePosition.character + 1)
-                + " " + ref.referenceText;
+                    + " " + ref.referenceText;
             }
             if (includeConfirmedReferences && ref.referenceType === ReferenceType.Confirmed) {
                 confirmedRefs.push(line);
@@ -76,8 +77,8 @@ export class FindAllRefsView {
         const fileReferences: TreeNode[] = this.referencesModel.getAllFilesWithPendingReferenceNodes();
         for (const fileRef of fileReferences) {
             const line: string =
-                ("[" + getReferenceTagString(ReferenceType.ConfirmationInProgress, this.referencesModel.isCanceled) + "] "
-                + fileRef.filename);
+                "[" + getReferenceTagString(ReferenceType.ConfirmationInProgress, this.referencesModel.isCanceled) + "] "
+                    + fileRef.filename;
             fileRefs.push(line);
         }
 
